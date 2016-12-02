@@ -7,7 +7,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-
+#include <string.h>
 
 GLFWwindow* window;
 
@@ -30,6 +30,108 @@ const GLubyte Indices[] = {
   0, 1, 2,
   2, 3, 0
 };
+
+
+typedef struct RGBPixel {
+	unsigned char r;
+	unsigned char g;
+	unsigned char b;
+} RGBPixel;
+
+
+typedef struct PPMimage {
+	int width;
+	int height;
+	int maxColorValue;
+	unsigned char *data;
+} PPMimage;
+
+PPMimage *buffer;
+
+PPMimage PPMRead(char *inputFilename);
+
+PPMimage PPMRead(char *inputFilename) {
+	buffer = (PPMimage*)malloc(sizeof(PPMimage));
+	FILE* fh = fopen(inputFilename, "rb");
+	if (fh == NULL) {
+		fprintf(stderr, "Error: open the file unsuccessfully. \n");
+		exit(1);
+	}
+	int c = fgetc(fh);
+	if (c != 'P') {
+		fprintf(stderr, "Error: incorrect input file formart, the file should be a PPM file. \n");
+		exit(1);
+	}
+	c = fgetc(fh);
+	char ppmVersionNum = c;
+	if (ppmVersionNum != '3' && ppmVersionNum != '6') {
+		fprintf(stderr, "Error: invalid magic number, the ppm version should be either P3 or P6. \n");
+		exit(1);
+	}
+
+	while (c != '\n') {
+		c = fgetc(fh);
+	}
+	
+	c = fgetc(fh);
+	while (c == '#') {
+		while (c != '\n') {
+			c = fgetc(fh);
+		}
+		c = fgetc(fh);
+	}
+	
+	ungetc(c, fh);
+
+	int wh = fscanf(fh, "%d %d", &buffer->width, &buffer->height);
+	if (wh != 2) {
+		fprintf(stderr, "Error: the size of image has to include width and height, invalid data for image. \n");
+		exit(1);
+	}
+	int mcv = fscanf(fh, "%d", &buffer->maxColorValue);
+	if (mcv != 1) {
+		fprintf(stderr, "Error: the max color value has to be one single value. \n");
+		exit(1);
+	}
+	if (buffer->maxColorValue != 255) {
+		fprintf(stderr, "Error: the image has to be 8-bit per channel. \n");
+		exit(1);
+	}
+
+	buffer->data = (unsigned char*)malloc(buffer->width*buffer->height*sizeof(RGBPixel));
+	if (buffer == NULL) {
+		fprintf(stderr, "Error: allocate the memory unsuccessfully. \n");
+		exit(1);
+	}
+	
+	if (ppmVersionNum == '3') {
+		int i, j;
+		for (i = 0; i<buffer->height; i++) {
+			for (j = 0; j<buffer->width; j++) {
+				RGBPixel *pixel = (RGBPixel*)malloc(sizeof(RGBPixel));
+				fscanf(fh, "%d %d %d", &pixel->r, &pixel->g, &pixel->b);
+				buffer->data[i*buffer->width * 3 + j * 3] = pixel->r;
+				buffer->data[i*buffer->width * 3 + j * 3 + 1] = pixel->g;
+				buffer->data[i*buffer->width * 3 + j * 3 + 2] = pixel->b;
+			}
+		}
+	}
+	
+	else if (ppmVersionNum == '6') {
+		size_t s = fread(buffer->data, sizeof(RGBPixel), buffer->width*buffer->height, fh);
+		if (s != buffer->width*buffer->height) {
+			fprintf(stderr, "Error: read size and real size are not match");
+			exit(1);
+		}
+	}
+	else {
+		fprintf(stderr, "Error: the ppm version cannot be read. \n");
+		exit(1);
+	}
+	fclose(fh);
+	return *buffer;
+}
+
 
 
 char* vertex_shader_src =
