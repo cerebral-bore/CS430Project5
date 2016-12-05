@@ -10,7 +10,7 @@
 #include <string.h>
 
 GLFWwindow* window;
-
+int viewEditFlag = 0;
 
 typedef struct {
   float position[3];
@@ -207,9 +207,37 @@ static void error_callback(int error, const char* description) {
   fputs(description, stderr);
 }
 
+// Currently all the buttons do is just close the window
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){
-	if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
+	
+	if(key == GLFW_KEY_1 && action == GLFW_PRESS){
+		// Change a flag variable to select Translation
+		viewEditFlag = 1;
+		glfwSetWindowTitle(window, "Hello World - Translation");
+	} else if (key == GLFW_KEY_2 && action == GLFW_PRESS){
+		// Change a flag variable to select Rotation
+		viewEditFlag = 2;
+		glfwSetWindowTitle(window, "Hello World - Rotation");
+	} else if (key == GLFW_KEY_3 && action == GLFW_PRESS){
+		// Change a flag variable to select Scaling
+		viewEditFlag = 3;
+		glfwSetWindowTitle(window, "Hello World - Scaling");
+	} else if (key == GLFW_KEY_4 && action == GLFW_PRESS){
+		// Change a flag variable to select Shearing
+		viewEditFlag = 4;
+		glfwSetWindowTitle(window, "Hello World - Shearing");
+	} else if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
+		// Pressing 'Esc' will close the window
         glfwSetWindowShouldClose(window, GLFW_TRUE);
+	}
+	if (key == GLFW_KEY_LEFT && action == GLFW_PRESS){
+		glfwSetWindowShouldClose(window, GLFW_TRUE);
+	} else if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS){
+		glfwSetWindowShouldClose(window, GLFW_TRUE);
+	} else if (key == GLFW_KEY_UP && action == GLFW_PRESS){
+		glfwSetWindowShouldClose(window, GLFW_TRUE);
+	} else if (key == GLFW_KEY_DOWN && action == GLFW_PRESS){
+		glfwSetWindowShouldClose(window, GLFW_TRUE);
 	}
 }
 
@@ -231,14 +259,17 @@ int main(void) {
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-
+		// This makes it so the window can't be resized
+		glfwWindowHint(GLFW_RESIZABLE, 0);
+		
 		// Create and open a window
-		window = glfwCreateWindow(800,
-								600,
+		// (x,y,string,"glfwGetPrimaryMonitor()",NULL) Makes the window into a fullscreen window
+		window = glfwCreateWindow(640,
+								480,
 								"Hello World",
 								NULL,
 								NULL);
-
+		
 		if (!window) {
 			glfwTerminate();
 			printf("glfwCreateWindow Error\n");
@@ -278,7 +309,7 @@ int main(void) {
 		glClearColor(0, 104.0/255.0, 55.0/255.0, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		glViewport(80, 80, 640, 480);
+		glViewport(0, 0, 640, 480);
 
 		glVertexAttribPointer(position_slot,
 							  3,
