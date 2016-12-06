@@ -318,7 +318,8 @@ int main(int args, char *argv[]) {
 	// Designate a program for OpenGL to work with
 	glUseProgram(program_id);
 
-	// 
+	// From what I understand, these EnableVertex calls allow for the program position and color
+	// values to actually be used for rendering
 	position_slot = glGetAttribLocation(program_id, "Position");
 	color_slot = glGetAttribLocation(program_id, "SourceColor");
 	glEnableVertexAttribArray(position_slot);
@@ -333,21 +334,29 @@ int main(int args, char *argv[]) {
 	// Send the data
 	glBufferData(GL_ARRAY_BUFFER, sizeof(Vertices), Vertices, GL_STATIC_DRAW);
 
+	// Generate a single buffer name and place it in index_buffer
 	glGenBuffers(1, &index_buffer);
+	// Binds the index_buffer to the "vertex array indices" buffer
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer);
+	// Populate the ELEMENT_ARRAY Buffer with data storage amount of "sizeof(Indices)"
+	// and store the Indices array inside the buffer, then perform a GL_STATIC_DRAW with the buffer
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Indices), Indices, GL_STATIC_DRAW);
+	// Setup the keyboard command calling
 	glfwSetKeyCallback(window, key_callback);
 	
 
 	// Repeat
 	while (!glfwWindowShouldClose(window)){
 		
-
+		// Set a 'background' color, or use this as a default window color essentially
 		glClearColor(0, 104.0/255.0, 55.0/255.0, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		// Set the area of the window the drawn image can populate
 		glViewport(0, 0, 640, 480);
 
+		// Define what vertex attributes to use for rendering
+		// Corrolation with glEnableVertexAttribArray
 		glVertexAttribPointer(position_slot,
 							  3,
 							  GL_FLOAT,
@@ -362,18 +371,26 @@ int main(int args, char *argv[]) {
 							  sizeof(Vertex),
 							  (GLvoid*) (sizeof(float) * 3));
 
+		// Render some primative shapes using the array data, triangles in this case
 		glDrawElements(GL_TRIANGLES,
 					   sizeof(Indices) / sizeof(GLubyte),
 					   GL_UNSIGNED_BYTE, 0);
 
-		
+		// After a frame is rendered, the program needs to display another frame
+		// This is done by swapping the front and back buffers to create a stream
+		// Of rendered frames, because this program has no animation, all the frames look the same.
 		glfwSwapBuffers(window);
+		// Process events that have occured, such as keyboard events, window resize, etc.
+		// Essentially is a "redraw" tool, has corrolation with 'glSwapBuffers()'
 		glfwPollEvents();
 		
 		}
 		
-
+	// Cleanup functions
+	// Close the window and terminate the rendering processes
+	// Detachs the context from the main thread
 	glfwDestroyWindow(window);
 	glfwTerminate();
 	exit(EXIT_SUCCESS);
 }
+
