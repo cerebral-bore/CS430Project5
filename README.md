@@ -9,4 +9,4 @@ and/or keyboard controls to perform all the affine transformations on the image:
 • Scale
 • Shear
 
-Your program (ezview) should have this usage pattern:
+Your program (ezview) should have this usage pattern: 'ezview input.ppm'
