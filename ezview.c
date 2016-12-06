@@ -1,10 +1,10 @@
 #define GLFW_DLL 1
-#define GLFW_KEY_ESCAPE 256
+#define GLFW_INCLUDE_ES2 1
 
 #define GL_GLEXT_PROTOTYPES
 #include <GLES2/gl2.h>
 #include <GLFW/glfw3.h>
- 
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -54,18 +54,18 @@ PPMimage PPMRead(char *inputFilename) {
 	buffer = (PPMimage*)malloc(sizeof(PPMimage));
 	FILE* fh = fopen(inputFilename, "rb");
 	if (fh == NULL) {
-		fprintf(stderr, "Error: open the file unsuccessfully. \n");
+		fprintf(stderr, "Error: Could not open file. \n");
 		exit(1);
 	}
 	int c = fgetc(fh);
 	if (c != 'P') {
-		fprintf(stderr, "Error: incorrect input file formart, the file should be a PPM file. \n");
+		fprintf(stderr, "Error: Not a PPM file. \n");
 		exit(1);
 	}
 	c = fgetc(fh);
 	char ppmVersionNum = c;
 	if (ppmVersionNum != '3' && ppmVersionNum != '6') {
-		fprintf(stderr, "Error: invalid magic number, the ppm version should be either P3 or P6. \n");
+		fprintf(stderr, "Error: Only PPM3 and PPM6 are supported.\n");
 		exit(1);
 	}
 
@@ -85,22 +85,22 @@ PPMimage PPMRead(char *inputFilename) {
 
 	int wh = fscanf(fh, "%d %d", &buffer->width, &buffer->height);
 	if (wh != 2) {
-		fprintf(stderr, "Error: the size of image has to include width and height, invalid data for image. \n");
+		fprintf(stderr, "Error: PPM must have a width and height \n");
 		exit(1);
 	}
 	int mcv = fscanf(fh, "%d", &buffer->maxColorValue);
 	if (mcv != 1) {
-		fprintf(stderr, "Error: the max color value has to be one single value. \n");
+		fprintf(stderr, "Error: Only one value allowed for max color size \n");
 		exit(1);
 	}
 	if (buffer->maxColorValue != 255) {
-		fprintf(stderr, "Error: the image has to be 8-bit per channel. \n");
+		fprintf(stderr, "Error: PPM must be in 8-bit per channel color format\n");
 		exit(1);
 	}
 
 	buffer->data = (unsigned char*)malloc(buffer->width*buffer->height*sizeof(RGBPixel));
 	if (buffer == NULL) {
-		fprintf(stderr, "Error: allocate the memory unsuccessfully. \n");
+		fprintf(stderr, "Error: Memory could not be allocated \n");
 		exit(1);
 	}
 	
@@ -109,7 +109,7 @@ PPMimage PPMRead(char *inputFilename) {
 		for (i = 0; i<buffer->height; i++) {
 			for (j = 0; j<buffer->width; j++) {
 				RGBPixel *pixel = (RGBPixel*)malloc(sizeof(RGBPixel));
-				fscanf(fh, "%d %d %d", &pixel->r, &pixel->g, &pixel->b);
+				fscanf(fh, "%hhd %hhd %hhd", &pixel->r, &pixel->g, &pixel->b);
 				buffer->data[i*buffer->width * 3 + j * 3] = pixel->r;
 				buffer->data[i*buffer->width * 3 + j * 3 + 1] = pixel->g;
 				buffer->data[i*buffer->width * 3 + j * 3 + 2] = pixel->b;
@@ -120,7 +120,7 @@ PPMimage PPMRead(char *inputFilename) {
 	else if (ppmVersionNum == '6') {
 		size_t s = fread(buffer->data, sizeof(RGBPixel), buffer->width*buffer->height, fh);
 		if (s != buffer->width*buffer->height) {
-			fprintf(stderr, "Error: read size and real size are not match");
+			fprintf(stderr, "Error: Improper Size of ppm image.");
 			exit(1);
 		}
 	}
@@ -241,12 +241,43 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 	}
 }
 
-int main(void) {
+// Error checking function to minimize code in main()
+int errCheck(int args, char *argv[]){
+	
+	// Initial check to see if there are 1 input argument on launch
+	if ((args != 2) || (strlen(argv[1]) <= 4)){
+		fprintf(stderr, "Error: Program requires usage: 'ezview input.ppm'");
+		exit(1);
+	}
+
+	// Check the file extension of input file
+	char *extIn;
+	if(strrchr(argv[1],'.') != NULL){
+		extIn = strrchr(argv[1],'.');
+	} else {
+		printf("Error: Program requires a PPM file");
+		exit(1);
+	}
+	
+	// Check to see if the input file is in .ppm format
+	if(strcmp(extIn, ".ppm") != 0){
+		printf("Error: Input file not a PPM");
+		exit(1);
+	}
+
+	return(0);
+}
+
+int main(int args, char *argv[]) {
+	
+	errCheck(args, argv);
 
 	GLint program_id, position_slot, color_slot;
 	GLuint vertex_buffer;
 	GLuint index_buffer;
 
+	// This function sets the error callback, which is called with an error code
+	// and a human-readable description each time a GLFW error occurs.
 	glfwSetErrorCallback(error_callback);
 
 	// Initialize GLFW library
@@ -269,19 +300,25 @@ int main(void) {
 								"Hello World",
 								NULL,
 								NULL);
-		
+		// If the window isnt initialized, will throw error
 		if (!window) {
 			glfwTerminate();
 			printf("glfwCreateWindow Error\n");
 			exit(1);
 		}
 
+	// This function makes the OpenGL or OpenGL ES context of the specified
+	// window current on the calling thread.
+	// Essentially a "hey display this window's contents"
 	glfwMakeContextCurrent(window);
 
+	// Create a GL program with attached shaders
 	program_id = simple_program();
 
+	// Designate a program for OpenGL to work with
 	glUseProgram(program_id);
 
+	// 
 	position_slot = glGetAttribLocation(program_id, "Position");
 	color_slot = glGetAttribLocation(program_id, "SourceColor");
 	glEnableVertexAttribArray(position_slot);
