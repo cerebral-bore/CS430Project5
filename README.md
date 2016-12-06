@@ -5,8 +5,11 @@ images in P3 or P6 format and display the image in a window. You should also hav
 and/or keyboard controls to perform all the affine transformations on the image:
 
 • Translate	(pan)
+
 • Rotate
+
 • Scale
+
 • Shear
 
 Your program (ezview) should have this usage pattern: 'ezview input.ppm'
