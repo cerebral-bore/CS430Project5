@@ -1,7 +1,7 @@
 #define GLFW_DLL 1
-#define GLFW_INCLUDE_ES2 1
 
 // Wasn't required for my PC but just a safeguard considering 12-6-16's issues with texdemo
+#define GLFW_INCLUDE_ES2 1
 #define GLFW_TRUE 1
 
 #define GL_GLEXT_PROTOTYPES
@@ -14,9 +14,16 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#define PI 3.14159265359
 
 GLFWwindow* window;
-int viewEditFlag = 0;
+int viewEditFlag = 1;
+float translateX = 0.0;
+float translateY = 0.0;
+float rotationVal = 0.0;
+float scalarVal = 0.0;
+float shearVal = 0.0;
+
 
 typedef struct {
   float Position[2];
@@ -29,7 +36,6 @@ const Vertex vertices[] = {
   {{1, 1},  {1, 0}},
   {{-1, -1},  {0, 1}},
   {{1, 1}, {1, 0}},
-
   {{1, -1},  {1, 1}},
   {{-1, -1},  {0, 1}}
 };
@@ -184,13 +190,59 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
         glfwSetWindowShouldClose(window, GLFW_TRUE);
 	}
 	if (key == GLFW_KEY_LEFT && action == GLFW_PRESS){
-		glfwSetWindowShouldClose(window, GLFW_TRUE);
+		switch(viewEditFlag){
+			case 1: // Translation mode
+				translateX -= 0.25;
+				break;
+			case 2: // Rotation mode
+				rotationVal -= PI/2;
+				break;
+			case 3: // Scaling mode
+				break;
+			case 4: // Shear mode
+				shearVal -= 0.25;
+				break;
+		}
 	} else if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS){
-		glfwSetWindowShouldClose(window, GLFW_TRUE);
+		switch(viewEditFlag){
+			case 1: // Translation mode
+				translateX += 0.25;
+				break;
+			case 2: // Rotation mode
+				rotationVal += PI/2;
+				break;
+			case 3: // Scaling mode
+				break;
+			case 4: // Shear mode
+				shearVal += 0.25;
+				break;
+		}
 	} else if (key == GLFW_KEY_UP && action == GLFW_PRESS){
-		glfwSetWindowShouldClose(window, GLFW_TRUE);
+		switch(viewEditFlag){
+			case 1: // Translation mode
+				translateY -= 0.25;
+				break;
+			case 2: // Rotation mode
+				break;
+			case 3: // Scaling mode
+				scalarVal += 0.25;
+				break;
+			case 4: // Shear mode
+				break;
+		}
 	} else if (key == GLFW_KEY_DOWN && action == GLFW_PRESS){
-		glfwSetWindowShouldClose(window, GLFW_TRUE);
+		switch(viewEditFlag){
+			case 1: // Translation mode
+				translateY += 0.25;
+				break;
+			case 2: // Rotation mode
+				break;
+			case 3: // Scaling mode
+				scalarVal -= 0.25;
+				break;
+			case 4: // Shear mode
+				break;
+		}
 	}
 }
 
@@ -294,7 +346,7 @@ int main(int args, char *argv[]) {
 	
 	// Create and open a window
 	// (x,y,string,"glfwGetPrimaryMonitor()",NULL) Makes the window into a fullscreen window
-	window = glfwCreateWindow(640, 480, "CS460 Image Viewer", NULL, NULL);
+	window = glfwCreateWindow(640, 480, "CS460 Image Viewer - Translation", NULL, NULL);
 	
 	// If the window isnt initialized, will throw error
 	if (!window) {
@@ -355,19 +407,19 @@ int main(int args, char *argv[]) {
 	// Define what vertex attributes to use for rendering
 	// Corrolation with glEnableVertexAttribArray
     glVertexAttribPointer(vpos_location,
-			  2,
-			  GL_FLOAT,
-			  GL_FALSE,
-                          sizeof(Vertex),
-			  (void*) 0);
+						  2,
+						  GL_FLOAT,
+						  GL_FALSE,
+						  sizeof(Vertex),
+						  (void*) 0);
 
     glEnableVertexAttribArray(texcoord_location);
     glVertexAttribPointer(texcoord_location,
-			  2,
-			  GL_FLOAT,
-			  GL_FALSE,
-                          sizeof(Vertex),
-			  (void*) (sizeof(float) * 2));
+						  2,
+						  GL_FLOAT,
+						  GL_FALSE,
+						  sizeof(Vertex),
+						  (void*) (sizeof(float) * 2));
     
     int image_width = 4;
     int image_height = 4;
