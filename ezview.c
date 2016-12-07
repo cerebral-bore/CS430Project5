@@ -12,7 +12,7 @@
 #include <GLES2/gl2.h>
 #include <GLFW/glfw3.h>
 
-#include "../glfw-3.2.1/deps/linmath.h"
+#include "linmath.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -306,8 +306,7 @@ int main(int args, char *argv[]) {
 	// Perform startup argument error checking
 	errCheck(args, argv);
 	
-	char *inputFilename = argv[1];
-	PPMRead(inputFilename);
+	PPMRead(argv[1]);
 	
 	dimRatio = (float)imagedata->width/(float)imagedata->height;
 	vertices[0].Position[0]*= dimRatio;
@@ -341,7 +340,7 @@ int main(int args, char *argv[]) {
 	
 	// Create and open a window
 	// (x,y,string,"glfwGetPrimaryMonitor()",NULL) Makes the window into a fullscreen window
-	window = glfwCreateWindow(640, 480, "CS460 Image Viewer - Translation", NULL, NULL);
+	window = glfwCreateWindow(imagedata->width*1.3, imagedata->height*1.3, "CS460 Image Viewer - Translation", NULL, NULL);
 	
 	// If the window isnt initialized, will throw error
 	if (!window) {
@@ -415,9 +414,6 @@ int main(int args, char *argv[]) {
 						  GL_FALSE,
 						  sizeof(Vertex),
 						  (void*) (sizeof(float) * 2));
-    
-    int image_width = 4;
-    int image_height = 4;
 
     GLuint texID;
     glGenTextures(1, &texID);
