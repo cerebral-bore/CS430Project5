@@ -1,3 +1,7 @@
+/* 	Jesus Garcia
+	Project 5 - Image Viewer
+	CS430 - Comp. Gfx. - Dr. Palmer */
+
 #define GLFW_DLL 1
 
 // Wasn't required for my PC but just a safeguard considering 12-6-16's issues with texdemo
@@ -16,22 +20,13 @@
 #include <assert.h>
 #define PI 3.14159265359
 
-GLFWwindow* window;
-int viewEditFlag = 1;
-float translateX = 0.0;
-float translateY = 0.0;
-float rotationVal = 0.0;
-float scalarVal = 0.0;
-float shearVal = 0.0;
-
-
 typedef struct {
   float Position[2];
   float TexCoord[2];
 } Vertex;
 
 
-const Vertex vertices[] = {
+Vertex vertices[] = {
   {{-1, 1}, {0, 0}},
   {{1, 1},  {1, 0}},
   {{-1, -1},  {0, 1}},
@@ -60,11 +55,12 @@ typedef struct PPMimage {
 	unsigned char *data;
 } PPMimage;
 
-PPMimage *buffer;
-PPMimage PPMRead(char *inputFilename);
+PPMimage *imagedata;
+void PPMRead(char *inputFilename);
 
-PPMimage PPMRead(char *inputFilename) {
-	buffer = (PPMimage*)malloc(sizeof(PPMimage));
+// Parse the PPM image
+void PPMRead(char *inputFilename) {
+	imagedata = (PPMimage*)malloc(sizeof(PPMimage));
 	FILE* fh = fopen(inputFilename, "rb");
 	if (fh == NULL) {
 		fprintf(stderr, "Error: Could not open file. \n");
@@ -76,17 +72,18 @@ PPMimage PPMRead(char *inputFilename) {
 		exit(1);
 	}
 	c = fgetc(fh);
-	char ppmVersionNum = c;
-	if (ppmVersionNum != '3' && ppmVersionNum != '6') {
+	char ppmType = c;
+	if (ppmType != '3' && ppmType != '6') {
 		fprintf(stderr, "Error: Only PPM3 and PPM6 are supported.\n");
 		exit(1);
 	}
-
+	// Skip to end of line
 	while (c != '\n') {
 		c = fgetc(fh);
 	}
 	
 	c = fgetc(fh);
+	// Skip comments
 	while (c == '#') {
 		while (c != '\n') {
 			c = fgetc(fh);
@@ -96,52 +93,62 @@ PPMimage PPMRead(char *inputFilename) {
 	
 	ungetc(c, fh);
 
-	int wh = fscanf(fh, "%d %d", &buffer->width, &buffer->height);
-	if (wh != 2) {
+	// Some error checks
+	int size = fscanf(fh, "%d %d", &imagedata->width, &imagedata->height);
+	if (size != 2) {
 		fprintf(stderr, "Error: PPM must have a width and height \n");
 		exit(1);
 	}
-	int mcv = fscanf(fh, "%d", &buffer->maxColorValue);
-	if (mcv != 1) {
+	int maxCount = fscanf(fh, "%d", &imagedata->maxColorValue);
+	if (maxCount != 1) {
 		fprintf(stderr, "Error: Only one value allowed for max color size \n");
 		exit(1);
 	}
-	if (buffer->maxColorValue != 255) {
+	if (imagedata->maxColorValue != 255) {
 		fprintf(stderr, "Error: PPM must be in 8-bit per channel color format\n");
 		exit(1);
 	}
-
-	buffer->data = (unsigned char*)malloc(buffer->width*buffer->height*sizeof(RGBPixel));
-	if (buffer == NULL) {
+	// Skip a '\n' character
+	c = fgetc(fh);
+	// Allocate pixel data memory
+	imagedata->data = (unsigned char*)malloc(256*imagedata->width*imagedata->height);
+	if (imagedata == NULL) {
 		fprintf(stderr, "Error: Memory could not be allocated \n");
 		exit(1);
 	}
 	
-	if (ppmVersionNum == '3') {
+	// Get buffer data from P3 file
+	if (ppmType == '3') {
 		int i, j;
-		for (i = 0; i<buffer->height; i++) {
-			for (j = 0; j<buffer->width; j++) {
+		for (i = 0; i<imagedata->height; i++) {
+			for (j = 0; j<imagedata->width; j++) {
 				RGBPixel *pixel = (RGBPixel*)malloc(sizeof(RGBPixel));
 				fscanf(fh, "%hhd %hhd %hhd", &pixel->r, &pixel->g, &pixel->b);
-				buffer->data[i*buffer->width * 3 + j * 3] = pixel->r;
-				buffer->data[i*buffer->width * 3 + j * 3 + 1] = pixel->g;
-				buffer->data[i*buffer->width * 3 + j * 3 + 2] = pixel->b;
+				imagedata->data[i*imagedata->width * 3 + j * 3] = pixel->r;
+				imagedata->data[i*imagedata->width * 3 + j * 3 + 1] = pixel->g;
+				imagedata->data[i*imagedata->width * 3 + j * 3 + 2] = pixel->b;
 			}
 		}
-	} else if (ppmVersionNum == '6') {
-		size_t s = fread(buffer->data, sizeof(RGBPixel), buffer->width*buffer->height, fh);
-		if (s != buffer->width*buffer->height) {
-			fprintf(stderr, "Error: Improper Size of ppm image.");
-			exit(1);
-		}
+		// Or get data from P6 data
+	} else if (ppmType == '6') {
+		fread(imagedata->data, sizeof(RGBPixel), imagedata->width*imagedata->height, fh);
 	} else {
 		fprintf(stderr, "Error: the PPM version cannot be read. \n");
 		exit(1);
 	}
 	fclose(fh);
-	return *buffer;
 }
 
+GLFWwindow* window;
+int viewEditFlag = 1;
+float translateX = 0.0;
+float translateY = 0.0;
+float rotationVal = 0.0;
+float scalarValX = 0.0;
+float scalarValY = 0.0;
+float shearValX = 0.0;
+float shearValY = 0.0;
+float dimRatio = 0;
 
 static const char* vertex_shader_text =
 	"uniform mat4 MVP;\n"
@@ -195,52 +202,56 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 				translateX -= 0.25;
 				break;
 			case 2: // Rotation mode
-				rotationVal -= PI/2;
+				rotationVal += PI/8;
 				break;
 			case 3: // Scaling mode
+				scalarValX -= 0.5;
 				break;
 			case 4: // Shear mode
-				shearVal -= 0.25;
+				shearValX -= 0.25;
 				break;
 		}
 	} else if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS){
 		switch(viewEditFlag){
 			case 1: // Translation mode
-				translateX += 0.25;
+				translateX += 0.5;
 				break;
 			case 2: // Rotation mode
-				rotationVal += PI/2;
+				rotationVal -= PI/8;
 				break;
 			case 3: // Scaling mode
+				scalarValX += 0.5;
 				break;
 			case 4: // Shear mode
-				shearVal += 0.25;
+				shearValX += 0.25;
 				break;
 		}
 	} else if (key == GLFW_KEY_UP && action == GLFW_PRESS){
 		switch(viewEditFlag){
 			case 1: // Translation mode
-				translateY -= 0.25;
+				translateY += 0.5;
 				break;
 			case 2: // Rotation mode
 				break;
 			case 3: // Scaling mode
-				scalarVal += 0.25;
+				scalarValY += 0.5;
 				break;
 			case 4: // Shear mode
+				shearValY += 0.25;
 				break;
 		}
 	} else if (key == GLFW_KEY_DOWN && action == GLFW_PRESS){
 		switch(viewEditFlag){
 			case 1: // Translation mode
-				translateY += 0.25;
+				translateY -= 0.5;
 				break;
 			case 2: // Rotation mode
 				break;
 			case 3: // Scaling mode
-				scalarVal -= 0.25;
+				scalarValY -= 0.5;
 				break;
 			case 4: // Shear mode
+				shearValY -= 0.25;
 				break;
 		}
 	}
@@ -262,33 +273,6 @@ void glCompileShaderOrDie(GLuint shader) {
 		exit(1);
 	}
 }
-
-// 4 x 4 image..
-unsigned char image[] = {
-  255, 0, 0, 255,
-  255, 0, 0, 255,
-  255, 0, 0, 255,
-  255, 0, 0, 255,
-
-  0, 255, 0, 255,
-  0, 255, 0, 255,
-  0, 255, 0, 255,
-  0, 255, 0, 255,
-
-  0, 0, 255, 255,
-  0, 0, 255, 255,
-  0, 0, 255, 255,
-  0, 0, 255, 255,
-
-  255, 0, 255, 255,
-  255, 0, 255, 255,
-  255, 0, 255, 255,
-  255, 0, 255, 255
-};
-
-
-
-
 
 // Error checking function to minimize code in main()
 int errCheck(int args, char *argv[]){
@@ -321,6 +305,17 @@ int main(int args, char *argv[]) {
 	
 	// Perform startup argument error checking
 	errCheck(args, argv);
+	
+	char *inputFilename = argv[1];
+	PPMRead(inputFilename);
+	
+	dimRatio = (float)imagedata->width/(float)imagedata->height;
+	vertices[0].Position[0]*= dimRatio;
+	vertices[1].Position[0]*= dimRatio;
+	vertices[2].Position[0]*= dimRatio;
+	vertices[3].Position[0]*= dimRatio;
+	vertices[4].Position[0]*= dimRatio;
+	vertices[5].Position[0]*= dimRatio;
 
 	// Setup basic GL specific variables
 	GLFWwindow* window;
@@ -342,7 +337,7 @@ int main(int args, char *argv[]) {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 	// This makes it so the window can't be resized
-	glfwWindowHint(GLFW_RESIZABLE, 0);
+	// glfwWindowHint(GLFW_RESIZABLE, 0);
 	
 	// Create and open a window
 	// (x,y,string,"glfwGetPrimaryMonitor()",NULL) Makes the window into a fullscreen window
@@ -430,8 +425,8 @@ int main(int args, char *argv[]) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0, GL_RGBA, 
-		 GL_UNSIGNED_BYTE, image);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, imagedata->width, imagedata->height, 0, GL_RGB, 
+		 GL_UNSIGNED_BYTE, imagedata->data);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texID);
@@ -441,24 +436,43 @@ int main(int args, char *argv[]) {
 	// Repeat
 	while (!glfwWindowShouldClose(window)){
 		
-		float ratio;
-        int width, height;
-        mat4x4 m, p, mvp;
+		float wndRatio;
+		dimRatio = (float)imagedata->width/(float)imagedata->height;
+		int width, height;
+		mat4x4 m, p, mvp, rotMatrix, panMatrix, sclMatrix, shrMatrix, utilMatrix;
 
-        glfwGetFramebufferSize(window, &width, &height);
-        ratio = width / (float) height;
+		glfwGetFramebufferSize(window, &width, &height);
+		wndRatio = width / (float) height;
 
-        glViewport(0, 0, width, height);
-        glClear(GL_COLOR_BUFFER_BIT);
+		glViewport(0, 0, width, height);
+		glClear(GL_COLOR_BUFFER_BIT);
 
-        mat4x4_identity(m);
-        mat4x4_rotate_Z(m, m, (float) glfwGetTime());
-        mat4x4_ortho(p, -ratio, ratio, -1.f, 1.f, 1.f, -1.f);
-        mat4x4_mul(mvp, p, m);
+		mat4x4_identity(m); //affine matrix
+		mat4x4_identity(rotMatrix);  //Rotation Matrix
+		mat4x4_identity(panMatrix);  //Translate Matrix
+		mat4x4_identity(sclMatrix);  //Scale Matrix
+		mat4x4_identity(shrMatrix); //Shear Matrix
+		mat4x4_identity(utilMatrix);
 
-        glUseProgram(program);
-        glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*) mvp);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+		//Calculating Values for matrix manipulation
+		mat4x4_rotate_Z(rotMatrix, rotMatrix, rotationVal);
+		mat4x4_translate(panMatrix,translateX,translateY,0);
+		mat4x4_scale_aniso(sclMatrix, sclMatrix, scalarValX, scalarValY, 0);
+		mat4x4_shear(shrMatrix, shrMatrix, shearValX, shearValY);
+
+		//Creating a Single Affine Matrix
+		mat4x4_add(m,panMatrix,m);
+		mat4x4_add(m,utilMatrix,m);
+		mat4x4_add(m,sclMatrix,m);
+		mat4x4_add(m,shrMatrix,m);
+		mat4x4_mul(m,rotMatrix,m);
+
+		mat4x4_ortho(p, -wndRatio, wndRatio, -1.f, 1.f, 1.f, -1.f);
+		mat4x4_mul(mvp, p, m);
+
+		glUseProgram(program);
+		glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*) mvp);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		// After a frame is rendered, the program needs to display another frame
 		// This is done by swapping the front and back buffers to create a stream
