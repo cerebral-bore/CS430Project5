@@ -8,8 +8,12 @@ and/or keyboard controls to perform all the affine transformations on the image:
 
 • Rotate: Press '2' then use Left and/or Right to rotate the image.
 
-• Scale: Press '3' then use Up and/or Down to scale the image up or down, respectively.
+• Scale: Press '3' then use Left, Right, Up and/or Down to scale the image in any direction.
 
-• Shear: (Implementing soon)
+• Shear: Press '4' then use Left, Right, Up and/or Down to morph the image.
 
 Your program (ezview) should have this usage pattern: 'ezview input.ppm'
+
+TO COMPILE: simply run 'nmake' from the VS dev console
+
+The linmath.h header should be in the SAME DIRECTORY for simplicity sake
